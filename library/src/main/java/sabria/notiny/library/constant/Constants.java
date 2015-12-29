@@ -12,6 +12,8 @@ public class Constants {
 
     public static final String HANDLER_THREAD_NAME="dispatcher_thread_name";
 
+    public static final String THREAD_NAME="thread_name";
+
     public static final int DEFAULT_WORK_THREAD_SIZE=3;
 
 

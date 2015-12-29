@@ -37,8 +37,6 @@ public class DispatcherLogic {
         //插入Queue
         taskQueue.offer(task);
 
-
-
         //然后执行下一个Task
         processNextTask(mThreadPool,mDispatcherHandler,mQueuesList);
 
@@ -81,5 +79,25 @@ public class DispatcherLogic {
         if(Thread.currentThread() != mDispatcherHandler.getLooper().getThread()){
             throw new IllegalStateException("method accessed from wrong thread");
         }
+    }
+
+    public void destroy(ThreadPool mThreadPool) {
+        mThreadPool.destroy();
+    }
+
+
+
+
+    public void handlerAlreadyProcessedTask(ThreadPool mThreadPool, DispatcherHandler mDispatcherHandler, HashMap<String, SerialTaskQueue> mQueuesMap, ArrayList<SerialTaskQueue> mQueuesList, Task task) {
+
+        assertDispatcherThread(mDispatcherHandler);
+
+        //更新taskQueue的状态
+        SerialTaskQueue queue = mQueuesMap.get(task.subscriberCallback.queue);
+        queue.setProcessing(false);
+
+        task.recycle();
+        processNextTask(mThreadPool,mDispatcherHandler,mQueuesList);
+
     }
 }

@@ -22,7 +22,7 @@ import sabria.notiny.library.thread.dispatcher.DispatcherLogic;
 public class Dispatcher {
 
 
-    private final DispatcherHandler mDispatcherHandler;
+    public final DispatcherHandler mDispatcherHandler;
     private final DispatcherLogic dispatcherLogic;
     private final ThreadPool mThreadPool;
 
@@ -30,7 +30,12 @@ public class Dispatcher {
     private final ArrayList<SerialTaskQueue> mQueuesList;
 
 
+    public DispatcherHandler getDispatcherHandler() {
+        return mDispatcherHandler;
+    }
+
     public Dispatcher(){
+
         //使用HanderThread简化Looper的书写
         HandlerThread handlerThread = new HandlerThread(Constants.HANDLER_THREAD_NAME);
         handlerThread.start();
@@ -82,10 +87,12 @@ public class Dispatcher {
      * @param task
      */
     public void handlerAlreadyProcessedTask(Task task) {
+        dispatcherLogic.handlerAlreadyProcessedTask(mThreadPool,mDispatcherHandler,mQueuesMap,mQueuesList,task);
     }
     /**
      * 从DispatcherHandler中message传递过来的
      */
     public void handlerDestory() {
+        dispatcherLogic.destroy(mThreadPool);
     }
 }

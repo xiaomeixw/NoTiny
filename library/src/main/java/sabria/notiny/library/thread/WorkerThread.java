@@ -12,6 +12,7 @@ import sabria.notiny.library.util.Utils;
  * Date:2015-12-25  10:00
  * Base on Meilimei.com (PHP Service)
  * Describe: 探索线程与分发
+ * 这里是运行的工作线程
  * Version:1.0
  * Open source
  */
@@ -28,11 +29,14 @@ public class WorkerThread extends Thread{
     private Task mTask;
 
 
-    public  WorkerThread(ThreadPool threadPool){
+    public  WorkerThread(ThreadPool threadPool,String threadName){
+        super(threadName);
         this.mThreadPool=threadPool;
         mLock = new Object();
         mRunning = new AtomicBoolean(true);
     }
+
+
 
     public void cancel(){
         mRunning.set(false);
@@ -63,7 +67,9 @@ public class WorkerThread extends Thread{
 
             //执行任务
             try {
-                mTask.callback.onDispatchInBackground(mTask);
+
+                mTask.callbacks.onDispatchInBackground(mTask);
+
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }finally {
@@ -72,6 +78,7 @@ public class WorkerThread extends Thread{
                 synchronized (mLock){
                     mTask = null;
                 }
+
                 //分发机制处理
                 mThreadPool.onTaskProcessed(task);
             }
@@ -79,5 +86,23 @@ public class WorkerThread extends Thread{
 
         }
 
+    }
+
+    /**
+     * 消费者生产者经典模式
+     *  mLock.notify();
+     * @param task
+     * @return
+     */
+    public boolean processTask(Task task) {
+        synchronized (mLock){
+            //如果mTask不为空,那么就没必要将task赋值给mTask
+            if(mTask !=null){
+                return false;
+            }
+            mTask = task;
+            mLock.notify();
+            return true;
+        }
     }
 }

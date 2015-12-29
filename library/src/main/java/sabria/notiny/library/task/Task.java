@@ -1,6 +1,8 @@
 package sabria.notiny.library.task;
 
+
 import sabria.notiny.library.task.queue.ObjectsMeta;
+import sabria.notiny.library.test.TestRun;
 
 /**
  * Created by xiongwei,An Android project Engineer.
@@ -10,19 +12,75 @@ import sabria.notiny.library.task.queue.ObjectsMeta;
  * Version:1.0
  * Open source
  */
-public class Task {
+public class Task implements Runnable{
 
-    public ObjectsMeta.SubscriberCallback subscriberCallback;
+    private static final TaskPool POOL = new TaskPool(32);
 
     public Task prev;
 
-    //三个状态处理回调
-    public static interface TaskCallbacks {
-        void onPostFromBackground(Task task);
-        void onPostDelayed(Task task);
-        void onDispatchInBackground(Task task) throws Exception;
+    public Task() { }
+
+    public int code;
+
+    public static final int CODE_POST = 2;
+    public static final int CODE_DISPATCH_FROM_BACKGROUND = 10;
+    public static final int CODE_DISPATCH_TO_BACKGROUND = 11;
+
+
+
+    // dispatch in background
+    public ObjectsMeta.SubscriberCallback subscriberCallback;
+
+
+    public static Task obtainTask(int code) {
+        Task task;
+        synchronized (POOL) {
+            task = POOL.acquire();
+        }
+        task.code = code;
+        task.prev = null;
+        return task;
+    }
+
+    @Override
+    public void run() {
+
+        switch (code){
+            case CODE_DISPATCH_FROM_BACKGROUND:
+                callbacks.onPostFromBackground(this);
+                break;
+        }
+
+
+
+
+        //执行二叉树10万次
+        for(int i =0 ;i<100000;i++){
+            TestRun.main();
+        }
     }
 
 
-    public TaskCallbacks  callback;
+
+    //状态处理回调
+    public TaskCallbacks  callbacks;
+    public  interface TaskCallbacks {
+        void onPostFromBackground(Task task);
+        void onDispatchInBackground(Task task) throws Exception;
+
+
+    }
+    public Task setTaskCallbacks(TaskCallbacks callbacks) {
+        this.callbacks = callbacks;
+        return this;
+    }
+
+
+
+
+    //all set null
+    public void recycle() {
+    }
+
+
 }
