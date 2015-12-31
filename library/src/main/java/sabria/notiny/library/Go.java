@@ -2,7 +2,6 @@ package sabria.notiny.library;
 
 import android.content.Context;
 
-import sabria.notiny.library.task.Task;
 import sabria.notiny.library.task.TaskQueue;
 
 /**
@@ -25,7 +24,7 @@ public class Go {
 
     public static void run() {
 
-        Task task = Task.obtainTask( Task.CODE_DISPATCH_TO_BACKGROUND).setTaskCallbacks(this);
+
     }
 
 
