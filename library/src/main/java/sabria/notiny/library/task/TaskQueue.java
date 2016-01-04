@@ -45,7 +45,6 @@ public class TaskQueue implements Queue{
             tail.prev = task;
             tail = task;
         }
-
     }
 
     /**

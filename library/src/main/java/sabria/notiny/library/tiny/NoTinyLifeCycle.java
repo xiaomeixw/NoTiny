@@ -5,6 +5,11 @@ import android.app.Application;
 import android.content.Context;
 import android.os.Bundle;
 
+import java.util.WeakHashMap;
+
+import sabria.notiny.library.NoTiny;
+import sabria.notiny.library.thread.Dispatcher;
+
 /**
  * Created by xiongwei,An Android project Engineer.
  * Date:2015-12-28  15:27
@@ -17,6 +22,13 @@ public class NoTinyLifeCycle implements Application.ActivityLifecycleCallbacks {
 
 
     private static  NoTinyLifeCycle INSTANCE;
+
+    public static interface LifecycleCallbacks {
+        void attachContext(Context context,NoTiny noTiny);
+        void onStart();
+        void onStop();
+        void onDestroy();
+    }
 
 
     public static NoTinyLifeCycle get(Context context) {
@@ -31,6 +43,29 @@ public class NoTinyLifeCycle implements Application.ActivityLifecycleCallbacks {
         app.registerActivityLifecycleCallbacks(this);
     }
 
+    private final WeakHashMap<Context, NoTiny> mBuses = new WeakHashMap<Context, NoTiny>();
+
+    /**
+     * 创建一个Tiny
+     * @param context
+     * @return
+     */
+    public NoTiny createNoTiny(Context context){
+        NoTiny noTiny = new NoTiny(context);
+        mBuses.put(context,noTiny);
+        return noTiny;
+    }
+
+
+    //绑定dispatcher
+    private Dispatcher mDispatcher;
+
+    public Dispatcher getDispatcher() {
+        if (mDispatcher == null) {
+            mDispatcher = new Dispatcher();
+        }
+        return mDispatcher;
+    }
 
     @Override
     public void onActivityCreated(Activity activity, Bundle savedInstanceState) {

@@ -1,6 +1,9 @@
 package sabria.notiny.library.task;
 
 
+import java.lang.ref.WeakReference;
+
+import sabria.notiny.library.NoTiny;
 import sabria.notiny.library.task.queue.ObjectsMeta;
 import sabria.notiny.library.test.TestRun;
 
@@ -16,13 +19,21 @@ public class Task implements Runnable{
 
     private static final TaskPool POOL = new TaskPool(32);
 
+
+
     public Task prev;
 
     public Task() { }
 
     public int code;
+    public Object obj;
+    public NoTiny bus;
 
-    public static final int CODE_POST = 2;
+
+    public static final int CODE_REGISTER = 1;
+    public static final int CODE_UNREGISTER = 2;
+    public static final int CODE_POST = 3;
+    public static int CODE_POST_DELAYED = 4;
     public static final int CODE_DISPATCH_FROM_BACKGROUND = 10;
     public static final int CODE_DISPATCH_TO_BACKGROUND = 11;
 
@@ -30,13 +41,17 @@ public class Task implements Runnable{
 
     // dispatch in background
     public ObjectsMeta.SubscriberCallback subscriberCallback;
+    public WeakReference<Object> receiverRef;
 
 
-    public static Task obtainTask(int code) {
+    public static Task obtainTask(NoTiny noTiny,int code,Object obj) {
         Task task;
         synchronized (POOL) {
             task = POOL.acquire();
         }
+
+        //TODO
+
         task.code = code;
         task.prev = null;
         return task;
@@ -66,9 +81,8 @@ public class Task implements Runnable{
     public TaskCallbacks  callbacks;
     public  interface TaskCallbacks {
         void onPostFromBackground(Task task);
+        void onPostDelayed(Task task);
         void onDispatchInBackground(Task task) throws Exception;
-
-
     }
     public Task setTaskCallbacks(TaskCallbacks callbacks) {
         this.callbacks = callbacks;
