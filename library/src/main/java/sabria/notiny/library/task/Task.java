@@ -5,7 +5,6 @@ import java.lang.ref.WeakReference;
 
 import sabria.notiny.library.NoTiny;
 import sabria.notiny.library.task.queue.ObjectsMeta;
-import sabria.notiny.library.test.TestRun;
 
 /**
  * Created by xiongwei,An Android project Engineer.
@@ -19,8 +18,20 @@ public class Task implements Runnable{
 
     private static final TaskPool POOL = new TaskPool(32);
 
+    //状态处理回调
+    public TaskCallbacks  callbacks;
+    public  interface TaskCallbacks {
+        void onPostFromBackground(Task task);
+        void onPostDelayed(Task task);
+        void onDispatchInBackground(Task task) throws Exception;
+    }
+    public Task setTaskCallbacks(TaskCallbacks callbacks) {
+        this.callbacks = callbacks;
+        return this;
+    }
 
 
+    //
     public Task prev;
 
     public Task() { }
@@ -33,7 +44,7 @@ public class Task implements Runnable{
     public static final int CODE_REGISTER = 1;
     public static final int CODE_UNREGISTER = 2;
     public static final int CODE_POST = 3;
-    public static int CODE_POST_DELAYED = 4;
+    public static final int CODE_POST_DELAYED = 4;
     public static final int CODE_DISPATCH_FROM_BACKGROUND = 10;
     public static final int CODE_DISPATCH_TO_BACKGROUND = 11;
 
@@ -49,45 +60,33 @@ public class Task implements Runnable{
         synchronized (POOL) {
             task = POOL.acquire();
         }
-
-        //TODO
-
+        task.bus=noTiny;
         task.code = code;
+        task.obj=obj;
         task.prev = null;
         return task;
     }
 
     @Override
     public void run() {
-
         switch (code){
             case CODE_DISPATCH_FROM_BACKGROUND:
                 callbacks.onPostFromBackground(this);
                 break;
+
+            case CODE_POST_DELAYED:
+                callbacks.onPostDelayed(this);
+                break;
+
+            default:
+                throw new IllegalStateException(String.valueOf(code));
+
         }
-
-
-
-
-        //执行二叉树10万次
-        for(int i =0 ;i<100000;i++){
-            TestRun.main();
-        }
     }
 
 
 
-    //状态处理回调
-    public TaskCallbacks  callbacks;
-    public  interface TaskCallbacks {
-        void onPostFromBackground(Task task);
-        void onPostDelayed(Task task);
-        void onDispatchInBackground(Task task) throws Exception;
-    }
-    public Task setTaskCallbacks(TaskCallbacks callbacks) {
-        this.callbacks = callbacks;
-        return this;
-    }
+
 
 
 
