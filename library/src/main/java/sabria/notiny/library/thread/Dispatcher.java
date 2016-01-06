@@ -39,7 +39,6 @@ public class Dispatcher {
         //使用HanderThread简化Looper的书写
         HandlerThread handlerThread = new HandlerThread(Constants.HANDLER_THREAD_NAME);
         handlerThread.start();
-        mDispatcherHandler = new DispatcherHandler(handlerThread.getLooper(), this);
 
         //DispatcherLogic执行任务
         dispatcherLogic = new DispatcherLogic();
@@ -51,7 +50,7 @@ public class Dispatcher {
         mQueuesList  = new ArrayList<>(4);
         mQueuesMap  = new HashMap<>(4);
 
-
+        mDispatcherHandler = new DispatcherHandler(handlerThread.getLooper(), this);
     }
 
 

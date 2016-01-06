@@ -20,9 +20,9 @@ import sabria.notiny.library.thread.Dispatcher;
  */
 public class DispatcherHandler extends Handler {
 
-    static final int MESSAGE_PROCESS_TASK = 0x1111;
-    static final int MESSAGE_ALREADY_PROCESSED_TASK=0x1112;
-    static final int MESSAGE_DESTORY=0x1113;
+    static final int MESSAGE_PROCESS_TASK = 1;
+    static final int MESSAGE_ALREADY_PROCESSED_TASK=2;
+    static final int MESSAGE_DESTORY=3;
 
 
     private final WeakReference<Dispatcher> mDispatcherRef;
@@ -38,7 +38,8 @@ public class DispatcherHandler extends Handler {
     public void handleMessage(Message msg) {
         Dispatcher dispatcher = mDispatcherRef.get();
         //软引用中还存有Dispatcher对象
-        if(dispatcher!=null){
+        //TODO 这里写成!=导致找bug找了一天！！！对自己无语啊！
+        if(dispatcher==null){
             msg.what=MESSAGE_DESTORY;
         }
 

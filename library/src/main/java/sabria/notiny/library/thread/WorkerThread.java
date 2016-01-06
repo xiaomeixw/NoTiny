@@ -38,6 +38,9 @@ public class WorkerThread extends Thread{
 
 
 
+
+
+
     public void cancel(){
         mRunning.set(false);
     }
@@ -48,6 +51,8 @@ public class WorkerThread extends Thread{
      */
     @Override
     public void run() {
+
+
         //执行为跑后台线程,为UI线程给予更多资源
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
         //初始化的AtomicBoolean mRunning为ture,只有显示调用cancel thread才设置为false,停止thread运行
@@ -78,7 +83,6 @@ public class WorkerThread extends Thread{
                 synchronized (mLock){
                     mTask = null;
                 }
-
                 //分发机制处理
                 mThreadPool.onTaskProcessed(task);
             }

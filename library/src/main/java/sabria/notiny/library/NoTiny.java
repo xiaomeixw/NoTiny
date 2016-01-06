@@ -1,5 +1,7 @@
 package sabria.notiny.library;
 
+import android.app.Application;
+import android.app.Service;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -7,13 +9,17 @@ import android.util.Log;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import sabria.notiny.library.constant.Constants;
+import sabria.notiny.library.extent.Wireable;
 import sabria.notiny.library.task.Task;
 import sabria.notiny.library.task.TaskQueue;
 import sabria.notiny.library.task.queue.ObjectsMeta;
 import sabria.notiny.library.tiny.EventBus;
+import sabria.notiny.library.tiny.NoTinyImpl;
 import sabria.notiny.library.tiny.NoTinyLifeCycle;
 import sabria.notiny.library.util.Utils;
 
@@ -48,8 +54,7 @@ public class NoTiny implements EventBus {
 
     public NoTiny(Context context) {
         
-        NoTinyImpl mImpl  = new NoTinyImpl();
-        mImpl.attachContext(context,this);
+        mImpl  = new NoTinyImpl();
 
         mTaskQueue = new TaskQueue();
         mMainThread  = Thread.currentThread();
@@ -58,10 +63,22 @@ public class NoTiny implements EventBus {
         //如果looper 不为null,就new Handler(looper)
         mMainHandler = looper == null ? null : new Handler(looper);
 
+        //必须放在mMainHandler初始化后,因为要用getHandler获取mMainHandler对象
+        mImpl.attachContext(context,this);
+
     }
 
 
-    public static EventBus getDefault(Context context) {
+    public static synchronized EventBus getDefault(Context context) {
+        final NoTinyLifeCycle noTinyLifeCycle = NoTinyLifeCycle.get(context);
+        NoTiny noTiny = noTinyLifeCycle.createNoTiny(context);
+        if(noTiny==null){
+            noTiny = noTinyLifeCycle.createNoTiny(context);
+        }
+        return noTiny;
+    }
+
+    /*public static EventBus getDefault(Context context) {
         if (defaultInstance == null) {
             synchronized (EventBus.class) {
                 if (defaultInstance == null) {
@@ -70,7 +87,7 @@ public class NoTiny implements EventBus {
             }
         }
         return defaultInstance;
-    }
+    }*/
 
     public static NoTiny getNoTiny(Context context) {
         final NoTinyLifeCycle noTinyLifeCycle = NoTinyLifeCycle.get(context);
@@ -85,6 +102,7 @@ public class NoTiny implements EventBus {
     @Override
     public void register(Object object) {
         Utils.assertObjectAndWorkerThread(object,mMainThread);
+        Log.d(Constants.TAG, "NoTinyLifeCycle=" + object);
         mTaskQueue.offer(Task.obtainTask(this,Task.CODE_REGISTER,object));
         if(!mProcessing){
             processQueue();
@@ -120,7 +138,8 @@ public class NoTiny implements EventBus {
             //主线程调用post()-->创建一个task并添加它到队列底部
             Task task = Task.obtainTask(this, Task.CODE_POST, event);
             mTaskQueue.offer(task);
-            if(mProcessing){
+            //TODO 扯犊子啊,这里掉了个！,找BUG啊
+            if(!mProcessing){
                 processQueue();
             }
         }else{
@@ -129,8 +148,6 @@ public class NoTiny implements EventBus {
                 Task task = Task.obtainTask(this, Task.CODE_DISPATCH_FROM_BACKGROUND, event).setTaskCallbacks(mImpl);
                 Utils.getMainHandlerNotNull(mMainHandler).post(task);
             }
-
-
         }
 
     }
@@ -170,12 +187,14 @@ public class NoTiny implements EventBus {
             //如果队列的顶部一直有task
             while((task=mTaskQueue.poll())!=null){
                 obj=task.obj;
+                Log.i(Constants.TAG,"obj="+obj);
                 objClass = obj.getClass();
                 switch (task.code){
                     case Task.CODE_REGISTER:{
                         meta = OBJECTS_METAS.get(objClass);
                         if(meta == null){
-                            meta = new ObjectsMeta(objClass);
+                            //TODO 无语,这里开始传成objClass，导致反射时反射的是class不是具体的activity
+                            meta = new ObjectsMeta(obj);
                             OBJECTS_METAS.put(objClass, meta);
                         }
                         meta.registerAtReceivers(obj, mEventSubscribers);
@@ -205,6 +224,7 @@ public class NoTiny implements EventBus {
                                 for (Object receiver : receivers) {
                                     meta = OBJECTS_METAS.get(receiver.getClass());
                                     subscriberCallback = meta.getEventCallback(objClass);
+                                    Log.i(Constants.TAG,"meta="+meta);
                                     mImpl.dispatchEvent(subscriberCallback, receiver, obj);
                                 }
                             } catch (Exception e) {
@@ -227,10 +247,14 @@ public class NoTiny implements EventBus {
     }
 
 
+    //GET
+    public NoTinyLifeCycle.LifecycleCallbacks getLifecycleCallbacks() {
+        return mImpl;
+    }
 
-
-
-
+    public Handler getMainHandler() {
+        return mMainHandler;
+    }
 
     private RuntimeException handleExceptionOnEventDispatch(Exception e) {
         if (e instanceof RuntimeException) {
@@ -282,4 +306,66 @@ public class NoTiny implements EventBus {
             }
         }
     }
+
+    //wire
+    ArrayList<Wireable> mWireables;
+    public NoTiny wire(Wireable wireable){
+        Utils.assertObjectAndWorkerThread(wireable,mMainThread);
+        Context context = Utils.getNotNullContext(mImpl.getContextRef());
+
+        //第一次的为null,之后的都是添加到这个ArrayList数组中
+        if (mWireables == null) {
+            mWireables = new ArrayList<Wireable>();
+            mImpl.attachWireable(mWireables);
+        }
+
+        mWireables.add(wireable);
+
+        wireable.onCreate(this, context.getApplicationContext());
+        wireable.assertSuperOnCreateCalled();
+
+        if(context instanceof Application || context instanceof Service){
+            wireable.onStart();
+        }
+
+        return this;
+    }
+
+
+    public <T extends Wireable> T unwire(Class<T> wireClass){
+        Utils.assertObjectAndWorkerThread(wireClass,mMainThread);
+        Context context = Utils.getNotNullContext(mImpl.getContextRef());
+        Wireable  wireable = getWireable(wireClass);
+        if (wireable != null) {
+
+            if (context instanceof Application
+                    || context instanceof Service) {
+                wireable.onStop();
+                wireable.onDestroy();
+            }
+
+            mWireables.remove(wireable);
+        }
+        return (T) wireable;
+    }
+
+    public boolean hasWireable(Class<? extends Wireable> wireClass) {
+        return getWireable(wireClass) != null;
+    }
+
+    private Wireable getWireable(Class<? extends Wireable> wireClass) {
+        if (mWireables == null) {
+            return null;
+        }
+        for(Wireable wireable : mWireables) {
+            if (wireClass.equals(wireable.getClass())) {
+                return wireable;
+            }
+        }
+        return null;
+    }
+
+
+
+
 }

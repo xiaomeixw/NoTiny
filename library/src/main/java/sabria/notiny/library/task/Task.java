@@ -87,12 +87,14 @@ public class Task implements Runnable{
 
 
 
-
-
-
-
     //all set null
     public void recycle() {
+        bus=null;
+        obj=null;
+        callbacks=null;
+        synchronized (POOL){
+            POOL.release(this);
+        }
     }
 
 

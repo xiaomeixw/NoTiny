@@ -1,8 +1,11 @@
 package sabria.notiny.library.thread.dispatcher;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import sabria.notiny.library.constant.Constants;
 import sabria.notiny.library.task.Task;
 import sabria.notiny.library.task.queue.SerialTaskQueue;
 import sabria.notiny.library.thread.ThreadPool;
@@ -21,6 +24,9 @@ public class DispatcherLogic {
 
 
     public void handlerProcessTask(ThreadPool mThreadPool,DispatcherHandler mDispatcherHandler, HashMap<String, SerialTaskQueue> mQueuesMap, ArrayList<SerialTaskQueue> mQueuesList, Task task) {
+
+        Log.i(Constants.TAG,"handlerProcessTask---run");
+
         assertDispatcherThread(mDispatcherHandler);
 
         //创建一个Queue,然后放入这个Queue队列中

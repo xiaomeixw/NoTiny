@@ -16,5 +16,7 @@ public class Constants {
 
     public static final int DEFAULT_WORK_THREAD_SIZE=3;
 
+    public static final String TAG ="NoTinyLifeCycle";
+
 
 }

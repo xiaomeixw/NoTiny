@@ -44,7 +44,8 @@ public class ThreadPool {
         for(int i =0;i<size;i++){
             WorkerThread workerThread = mThrads[i];
             //如果workThrad数组中的为空,就创建
-            if(workerThread!=null){
+            //TODO 我真是有病,老把==手动自我意识的写成!=
+            if(workerThread==null){
                 workerThread = new WorkerThread(this, Constants.THREAD_NAME+i+"");
                 //执行workThread
                 workerThread.start();
